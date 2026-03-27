@@ -5,7 +5,7 @@ from sklearn.preprocessing import label_binarize
 from sklearn.metrics import confusion_matrix, roc_curve, auc, hamming_loss, precision_recall_curve, \
     average_precision_score
 from sklearn.metrics import precision_recall_fscore_support, matthews_corrcoef, hamming_loss
-
+import pandas as pd
 
 
 class Visualizer:
@@ -310,5 +310,229 @@ def plot_clinical_forecast(history_dates, history_burnout, future_dates, actual_
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.ylim(1, 10)
 
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_vif_bars(vif_input, threshold=5.0, cmap_name="viridis", figsize=(10, 6),
+                  title="Variance Inflation Factor (VIF) Validation",
+                  font_family=("DejaVu Sans", "Arial"),
+                  input_name_color="black", input_val_color="black"):
+    sns.set_theme(style="whitegrid")
+    plt.rcParams.update({
+        "font.family": "sans-serif",
+        "font.sans-serif": list(font_family),
+        "font.size": 15,
+        "axes.titlesize": 16,
+        "axes.labelsize": 14,
+    })
+
+    vif_df = pd.DataFrame(vif_input) if not isinstance(vif_input, pd.DataFrame) else vif_input.copy()
+    vif_plot = vif_df[vif_df["Feature"] != "const"].sort_values("VIF_Score", ascending=True).reset_index(drop=True)
+
+    cmap = plt.get_cmap(cmap_name)
+    colors = cmap(np.linspace(0.15, 0.85, len(vif_plot))) if len(vif_plot) > 0 else []
+
+    fig, ax = plt.subplots(figsize=(figsize[0], max(figsize[1], 0.5 * len(vif_plot))))
+    bars = ax.barh(range(len(vif_plot)), vif_plot["VIF_Score"], color=colors, edgecolor="k", linewidth=0.4)
+    ax.axvline(threshold, color="crimson", linestyle="--", linewidth=3.5, label=f"Threshold = {threshold}")
+
+    ax.xaxis.set_ticks_position('none')
+    ax.yaxis.set_ticks_position('none')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xlabel("VIF Score (Lower indicates higher independence)", fontsize=14, labelpad=15)
+    ax.set_title(title, fontsize=16, pad=15, fontweight='bold')
+
+    max_v = vif_plot["VIF_Score"].max() if len(vif_plot) > 0 else 1.0
+    left_text_x = 0.02 * max_v
+
+    for i, (bar, feat, v) in enumerate(zip(bars, vif_plot["Feature"], vif_plot["VIF_Score"])):
+        w = bar.get_width()
+        y = bar.get_y() + bar.get_height() / 2
+        clean_feat = str(feat).replace('_', ' ').title()
+
+        ax.text(left_text_x, y, clean_feat, va="center", ha="left", color=input_name_color, fontsize=14,
+                weight="semibold")
+        ax.text(w - 0.02 * max_v, y, f"{v:.2f}", va="center", ha="right", color=input_val_color, fontsize=14,
+                weight="bold")
+
+    ax.set_ylim(-0.5, len(vif_plot) - 0.5)
+    ax.legend(loc="lower right", frameon=True, fontsize=12)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_feature_dist(data, title="Standardized Feature Distributions (Latent Overlap)"):
+    plt.figure(figsize=(12, 6))
+    sns.kdeplot(
+        data=data, x='Z-Score', hue='Feature', fill=True,
+        common_norm=False, alpha=0.3, palette='viridis', linewidth=2
+    )
+    plt.title(title, fontsize=16, fontweight='bold', pad=15)
+    plt.xlabel("Z-Score (Standard Deviation from Mean)", fontsize=12)
+    plt.ylabel("Probability Density", fontsize=12)
+    plt.xlim(-4, 4)
+    plt.grid(True, alpha=0.2)
+    sns.move_legend(plt.gca(), "upper left", bbox_to_anchor=(1, 1), title="Behavioral Metrics")
+    plt.tight_layout()
+    plt.show()
+
+    def plot_streaming_benchmark(benchmark_df, title="Streaming Architectures: Topology vs. Latency",
+                                 font_family=("DejaVu Sans", "Arial")):
+        sns.set_theme(style="whitegrid")
+        plt.rcParams.update({
+            "font.family": "sans-serif",
+            "font.sans-serif": list(font_family),
+            "font.size": 14,
+            "axes.titlesize": 16,
+            "axes.labelsize": 14,
+        })
+
+        # Sort algorithms by structural performance (Silhouette Score)
+        plot_df = benchmark_df.sort_values(by='Silhouette Score', ascending=True).reset_index(drop=True)
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+
+        # Render horizontal bars
+        cmap = plt.get_cmap("viridis")
+        colors = cmap(np.linspace(0.2, 0.8, len(plot_df)))
+
+        bars = ax.barh(range(len(plot_df)), plot_df['Silhouette Score'], color=colors, edgecolor="k", linewidth=1.2)
+
+        ax.xaxis.set_ticks_position('none')
+        ax.yaxis.set_ticks_position('none')
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_xlabel("Topological Integrity (Maximized Silhouette Score)", fontsize=14, labelpad=15)
+        ax.set_title(title, fontsize=16, pad=15, fontweight='bold')
+
+        max_v = plot_df['Silhouette Score'].max()
+        left_text_x = 0.02 * max_v
+
+        for i, (bar, algo, s_score, db_score, latency) in enumerate(
+                zip(bars, plot_df['Algorithm'], plot_df['Silhouette Score'], plot_df['Davies-Bouldin'],
+                    plot_df['Latency (ms)'])):
+            w = bar.get_width()
+            y = bar.get_y() + bar.get_height() / 2
+
+            # Left-aligned Algorithm Name
+            ax.text(left_text_x, y, str(algo), va="center", ha="left", color="black", fontsize=15, weight="semibold")
+
+            # Right-aligned Diagnostic Metrics
+            metrics_text = f"S: {s_score:.4f}  |  DB: {db_score:.2f}  |  Latency: {latency:.1f} ms"
+
+            # Determine text color based on bar width to ensure readability
+            text_color = "black" if w < (0.85 * max_v) else "white"
+
+            ax.text(w - 0.015 * max_v, y, metrics_text, va="center", ha="right", color=text_color, fontsize=14,
+                    weight="bold")
+
+        ax.set_ylim(-0.5, len(plot_df) - 0.5)
+        plt.tight_layout()
+        plt.show()
+
+
+def plot_streaming_benchmark(benchmark_df, title="Streaming Architectures: Topology vs. Latency",
+                             font_family=("DejaVu Sans", "Arial")):
+    sns.set_theme(style="whitegrid")
+    plt.rcParams.update({
+        "font.family": "sans-serif",
+        "font.sans-serif": list(font_family),
+        "font.size": 14,
+        "axes.titlesize": 16,
+        "axes.labelsize": 14,
+    })
+
+    plot_df = benchmark_df.sort_values(by='Silhouette Score', ascending=True).reset_index(drop=True)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+
+    cmap = plt.get_cmap("viridis")
+    colors = cmap(np.linspace(0.2, 0.8, len(plot_df)))
+
+    bars = ax.barh(range(len(plot_df)), plot_df['Silhouette Score'], color=colors, edgecolor="k", linewidth=1.2)
+
+    ax.xaxis.set_ticks_position('none')
+    ax.yaxis.set_ticks_position('none')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xlabel("Topological Integrity (Maximized Silhouette Score)", fontsize=14, labelpad=15)
+    ax.set_title(title, fontsize=16, pad=15, fontweight='bold')
+
+    max_v = plot_df['Silhouette Score'].max()
+    left_text_x = 0.02 * max_v
+
+    for i, (bar, algo, s_score, db_score, latency) in enumerate(
+            zip(bars, plot_df['Algorithm'], plot_df['Silhouette Score'], plot_df['Davies-Bouldin'],
+                plot_df['Latency (ms)'])):
+        w = bar.get_width()
+        y = bar.get_y() + bar.get_height() / 2
+
+        ax.text(left_text_x, y, str(algo), va="center", ha="left", color="black", fontsize=15, weight="semibold")
+        metrics_text = f"S: {s_score:.4f}  |  DB: {db_score:.2f}  |  Latency: {latency:.1f} ms"
+        text_color = "black" if w < (0.85 * max_v) else "white"
+
+        ax.text(w - 0.015 * max_v, y, metrics_text, va="center", ha="right", color=text_color, fontsize=14,
+                weight="bold")
+
+    ax.set_ylim(-0.5, len(plot_df) - 0.5)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_cohort_centroids(profiles_df, title="Behavioral Centroids (Raw Domain Extraction)",
+                          font_family=("DejaVu Sans", "Arial")):
+    sns.set_theme(style="whitegrid")
+    plt.rcParams.update({
+        "font.family": "sans-serif",
+        "font.sans-serif": list(font_family),
+        "font.size": 14,
+        "axes.titlesize": 16,
+        "axes.labelsize": 14,
+    })
+
+    normalized_df = profiles_df.div(profiles_df.max(axis=1), axis=0)
+    metrics = profiles_df.index.tolist()
+    cohorts = profiles_df.columns.tolist()
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    bar_width = 0.35
+    y = np.arange(len(metrics))
+
+    color_map = {cohorts[0]: '#2ca02c', cohorts[1]: '#d62728'}
+
+    for i, cohort in enumerate(cohorts):
+        bar_lengths = normalized_df[cohort]
+        raw_values = profiles_df[cohort]
+
+        bars = ax.barh(y - bar_width / 2 + i * bar_width, bar_lengths, bar_width,
+                       label=cohort, color=color_map.get(cohort, '#333333'), edgecolor='black', linewidth=1.2)
+
+        for bar, raw_val, metric in zip(bars, raw_values, metrics):
+            width = bar.get_width()
+
+            if 'xp' in metric.lower():
+                text_val = f"{int(raw_val):,} XP"
+            elif 'burnout' in metric.lower():
+                text_val = f"{raw_val:.1f} / 10"
+            else:
+                text_val = f"{raw_val * 100:.1f}%"
+
+            ax.text(width + 0.02, bar.get_y() + bar.get_height() / 2, text_val,
+                    va='center', ha='left', color='black', fontsize=13, weight='bold')
+
+    ax.set_yticks(y)
+    clean_metrics = [m.replace('_', ' ').title() for m in metrics]
+    ax.set_yticklabels(clean_metrics, weight='bold', color='#333333')
+
+    ax.set_xlim(0, 1.25)
+    ax.set_xticks([])
+    ax.xaxis.set_ticks_position('none')
+    ax.yaxis.set_ticks_position('none')
+
+    ax.set_title(title, fontweight='bold', pad=20)
+    ax.legend(loc='lower right', frameon=True, fontsize=12)
+    sns.despine(left=True, bottom=True)
     plt.tight_layout()
     plt.show()
