@@ -621,35 +621,11 @@ def plot_cohort_centroids(profiles_df, title="Behavioral Centroids (Raw Domain E
     plt.show()
 
 
-def plot_xgbranker(data):
-    df_importance = data
-    sns.set_theme(style="whitegrid")
-    plt.rcParams.update({"font.size": 12, "axes.titlesize": 14})
-
-    fig, ax = plt.subplots(figsize=(10, 5))
-    bars = ax.barh(df_importance['Feature'], df_importance['Information Gain'],
-                   color='#2ca02c', edgecolor='black', linewidth=1.2)
-
-    for bar in bars:
-        width = bar.get_width()
-        ax.text(width + 0.01, bar.get_y() + bar.get_height() / 2, f'{width:.4f}',
-                va='center', ha='left', fontsize=11, fontweight='bold')
-
-    ax.set_title("XGBRanker Feature Contribution (Pairwise Loss Reduction)", fontweight='bold', pad=20)
-    ax.set_xlabel("Relative Information Gain", fontweight='bold')
-    ax.set_ylabel("")
-    ax.set_xlim(0, df_importance['Information Gain'].max() * 1.15)
-
-    sns.despine(left=True, bottom=True)
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_triage(data, sample_session_id):
-    # 6. Render the Native Matplotlib Table Architecture
-    fig, ax = plt.subplots(figsize=(12, 3.5))
+def plot_triage(top_5_df, sample_session_id, time_str):
+    # 7. Render the Native Matplotlib Table Architecture
+    fig, ax = plt.subplots(figsize=(12, 3.8))
     ax.axis('off')
-    top_5_df = data
+
     table = ax.table(cellText=top_5_df.values,
                      colLabels=top_5_df.columns,
                      cellLoc='center',
@@ -662,20 +638,20 @@ def plot_triage(data, sample_session_id):
 
     # Conditional Gradient Application
     cmap = plt.get_cmap('viridis')
-    min_util = top_5_df['Predicted_Utility'].min()
-    max_util = top_5_df['Predicted_Utility'].max()
+    min_util = top_5_df['Utility'].min()
+    max_util = top_5_df['Utility'].max()
     range_util = max_util - min_util if max_util != min_util else 1.0
 
     for (row, col), cell in table.get_celld().items():
         if row == 0:
             # Header formatting
             cell.set_text_props(weight='bold', color='white')
-            cell.set_facecolor('#2b2b2b')
+            cell.set_facecolor('#1E293B')  # Slate-800
         else:
             # Highlight True Engagement (Ground Truth Positive)
             if col == 6 and top_5_df.iloc[row - 1, col] == 1:
-                cell.set_facecolor('#b5e7a0')  # Mint Green indicator
-                cell.set_text_props(weight='bold')
+                cell.set_facecolor('#10B981')  # Emerald-500 indicator
+                cell.set_text_props(weight='bold', color='white')
 
             # Heatmap Gradient for Predicted Utility
             elif col == 5:
@@ -688,8 +664,32 @@ def plot_triage(data, sample_session_id):
                 text_color = 'white' if norm_val < 0.6 else 'black'
                 cell.set_text_props(color=text_color, weight='bold')
 
-    ax.set_title(f"Next-Best-Action Triage Engine (Session QID: {sample_session_id})",
+    ax.set_title(f"Next-Best-Action Triage Engine (Session: {sample_session_id} | Time: {time_str})",
                  fontweight='bold', fontsize=14, pad=15)
 
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_xgbranker(df_importance):
+    sns.set_theme(style="whitegrid")
+    plt.rcParams.update({"font.size": 12, "axes.titlesize": 14})
+    fig, ax = plt.subplots(figsize=(10, 6))
+    bars = ax.barh(df_importance['Feature'], df_importance['Information Gain'],
+                   color='#1f77b4', edgecolor='black', linewidth=1.2)
+
+    for bar in bars:
+        width = bar.get_width()
+        ax.text(width + 0.005, bar.get_y() + bar.get_height() / 2, f'{width:.4f}',
+                va='center', ha='left', fontsize=11, fontweight='bold', color='#333333')
+
+    ax.set_title("XGBRanker Feature Contribution (Pairwise Loss Reduction)", fontweight='bold', pad=20)
+    ax.set_xlabel("Relative Information Gain ($G_j$)", fontweight='bold')
+    ax.set_ylabel("Topological Feature Space ($\mathcal{X}$)", fontweight='bold')
+
+    # Extend X-axis slightly to accommodate the text annotations
+    ax.set_xlim(0, df_importance['Information Gain'].max() * 1.18)
+
+    sns.despine(left=True, bottom=True)
     plt.tight_layout()
     plt.show()
