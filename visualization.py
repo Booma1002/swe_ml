@@ -622,7 +622,6 @@ def plot_cohort_centroids(profiles_df, title="Behavioral Centroids (Raw Domain E
 
 
 def plot_triage(top_5_df, sample_session_id, time_str):
-    # 7. Render the Native Matplotlib Table Architecture
     fig, ax = plt.subplots(figsize=(12, 3.8))
     ax.axis('off')
 
@@ -631,12 +630,10 @@ def plot_triage(top_5_df, sample_session_id, time_str):
                      cellLoc='center',
                      loc='center')
 
-    # Structural Styling
     table.auto_set_font_size(False)
     table.set_fontsize(11)
     table.scale(1, 1.8)
 
-    # Conditional Gradient Application
     cmap = plt.get_cmap('viridis')
     min_util = top_5_df['Utility'].min()
     max_util = top_5_df['Utility'].max()
@@ -644,23 +641,17 @@ def plot_triage(top_5_df, sample_session_id, time_str):
 
     for (row, col), cell in table.get_celld().items():
         if row == 0:
-            # Header formatting
             cell.set_text_props(weight='bold', color='white')
-            cell.set_facecolor('#1E293B')  # Slate-800
+            cell.set_facecolor('#1E293B')
         else:
-            # Highlight True Engagement (Ground Truth Positive)
             if col == 6 and top_5_df.iloc[row - 1, col] == 1:
-                cell.set_facecolor('#10B981')  # Emerald-500 indicator
+                cell.set_facecolor('#10B981')
                 cell.set_text_props(weight='bold', color='white')
-
-            # Heatmap Gradient for Predicted Utility
             elif col == 5:
                 val = top_5_df.iloc[row - 1, col]
                 norm_val = (val - min_util) / range_util
                 rgba = cmap(norm_val)
                 cell.set_facecolor(rgba)
-
-                # Dynamic text color to maintain contrast against the Viridis gradient
                 text_color = 'white' if norm_val < 0.6 else 'black'
                 cell.set_text_props(color=text_color, weight='bold')
 
@@ -686,8 +677,6 @@ def plot_xgbranker(df_importance):
     ax.set_title("XGBRanker Feature Contribution (Pairwise Loss Reduction)", fontweight='bold', pad=20)
     ax.set_xlabel("Relative Information Gain ($G_j$)", fontweight='bold')
     ax.set_ylabel("Topological Feature Space ($\mathcal{X}$)", fontweight='bold')
-
-    # Extend X-axis slightly to accommodate the text annotations
     ax.set_xlim(0, df_importance['Information Gain'].max() * 1.18)
 
     sns.despine(left=True, bottom=True)
