@@ -333,5 +333,49 @@ else:
                                title="Global Cohort Distribution (BGM Latent Space)")
         st.plotly_chart(fig_swarm, use_container_width=True)
 
+        # ==========================================
+        # NEW: SUBJECT RANKINGS WITHIN COHORTS
+        # ==========================================
+        st.divider()
+        st.subheader("📊 Subject Rankings by Cohort (Semantic Density)")
+        st.caption("Deconstructing the BGM latent space to see which subjects dominate specific topological clusters.")
+
+        # 1. Identify the "High Performer" centroid dynamically from Engine 1
+        centroids = st.session_state.cohort_engine.scaler.inverse_transform(st.session_state.cohort_engine.model.means_)
+        hp_cluster = np.argmax(centroids[:, 0])  # Cluster with the highest Weekly XP
+
+        # 2. Map cluster labels to readable names
+        df_swarm['Cohort_Name'] = df_swarm['cluster_label'].apply(
+            lambda x: "🏆 High Performers (Target)" if x == hp_cluster else f"Cohort {x}"
+        )
+
+        # 3. Aggregate subject frequencies per cohort
+        cohort_ranking = df_swarm.groupby(['Cohort_Name', 'Subject_Category']).size().reset_index(name='Student_Count')
+
+        # Sort so the highest ranked subjects appear first in the chart
+        cohort_ranking = cohort_ranking.sort_values(by=['Cohort_Name', 'Student_Count'], ascending=[True, False])
+
+        # 4. Render Grouped Bar Chart
+        fig_cohort_rank = px.bar(
+            cohort_ranking,
+            x="Subject_Category",
+            y="Student_Count",
+            color="Cohort_Name",
+            barmode="group",
+            text="Student_Count",
+            template="plotly_dark",
+            title="Subject Popularity Distribution Across Latent Clusters",
+            color_discrete_sequence=["#3B82F6", "#10B981", "#EF4444", "#F59E0B"]  # Blue, Green, Red, Yellow
+        )
+
+        fig_cohort_rank.update_traces(textposition='outside')
+        fig_cohort_rank.update_layout(
+            yaxis_title="Number of Active Students",
+            xaxis_title="Subject Area",
+            margin=dict(t=50, b=0, l=0, r=0)
+        )
+
+        st.plotly_chart(fig_cohort_rank, use_container_width=True)
+
     else:
         st.info("No telemetry data available from Engine 1.")
