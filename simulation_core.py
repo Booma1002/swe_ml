@@ -139,13 +139,24 @@ class MasterSimulation:
 
     def synthesize_trend_title(self, task_chunk):
         """Calls Mistral via pure REST API and sends Toasts to the UI."""
+        # 1. Try local .env file first
         api_key = os.getenv("MISTRAL_API_KEY")
+
+        # 2. If running on Streamlit Cloud, fallback to st.secrets
         if not api_key:
-            st.toast("❌ MISTRAL_API_KEY missing from .env!", icon="🚨")
-            return "API_ERROR"
+            try:
+                api_key = st.secrets["MISTRAL_API_KEY"]
+            except FileNotFoundError:
+                # If neither exists, throw the fatal error
+                pass
+            except KeyError:
+                pass
+
+        if not api_key:
+            st.toast("❌ MISTRAL_API_KEY missing from both .env and st.secrets!", icon="🚨")
+            return "API_ERROR: Missing API Key"
 
         st.toast(f"Firing API Request to Mistral for chunk: {task_chunk[0]}...", icon="🌐")
-
         # --- THE ENHANCED, HALLUCINATION-PROOF PROMPT ---
         prompt = f"""You are a strict Academic Telemetry Filter. Your job is to extract and format the SINGLE best academic task from a given list.
                 
