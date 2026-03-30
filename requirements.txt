@@ -7,3 +7,10 @@ sentence-transformers
 faiss-cpu
 python-dotenv
 requests
+xgboost
+shap
+hyperopt
+matplotlib
+scipy
+statsmodels
+seaborn
