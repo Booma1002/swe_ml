@@ -225,6 +225,8 @@ def infer_cohort_sync(payload: BatchTelemetryRequest):
         "acceptable_burnout": round(centroids[hp_cluster, 3], 2),
     }]
 
+    with open("output/testing/continuous_cohort_model.pkl", "wb") as f:
+        pickle.dump(engine_1_cohort, f)
     return {"status": "success", "new_targets": targets}
 
 @app.post("/api/v1/infer/recommend")
