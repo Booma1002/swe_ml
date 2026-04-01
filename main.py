@@ -12,12 +12,15 @@ from typing import List, Optional
 import json
 from sklearn.mixture import BayesianGaussianMixture
 from sklearn.preprocessing import StandardScaler
+from dotenv import load_dotenv
 
+# Force Python to read the .env file
+load_dotenv()
 
 # ==========================================
 # INTERNAL STATE MEMORY
 # ==========================================
-STATE_FILE = "output/engine_state.json"
+STATE_FILE = "output/testing/engine_state.json"
 
 def get_current_trend():
     """Reads the trend internally so Node.js doesn't have to send it."""
@@ -82,10 +85,10 @@ def load_pickle(path):
     print(f"[!] Warning: Missing model at {path}")
     return None
 
-engine_1_cohort = load_pickle("output/continuous_cohort_model.pkl")
-engine_2_nlp = load_pickle("output/sentiment_model.pkl")
-engine_3_ts = load_pickle("output/time_series_model.pkl")
-engine_4_rec = load_pickle("output/recommender_engine.pkl")
+engine_1_cohort = load_pickle("output/testing/continuous_cohort_model.pkl")
+engine_2_nlp = load_pickle("output/testing/sentiment_model.pkl")
+engine_3_ts = load_pickle("output/testing/time_series_model.pkl")
+engine_4_rec = load_pickle("output/testing/recommender_engine.pkl")
 
 print("[+] Systems Online.")
 
@@ -282,8 +285,8 @@ def retrain_sentiment(payload: SentimentRetrainPayload):
 
         engine_2_nlp.fit(X, y)
 
-        os.makedirs("output", exist_ok=True)
-        with open("output/sentiment_model.pkl", "wb") as f:
+        os.makedirs("output/testing", exist_ok=True)
+        with open("output/testing/sentiment_model.pkl", "wb") as f:
             pickle.dump(engine_2_nlp, f)
 
         return {"status": "success", "message": f"Engine 2 retrained on {len(df)} records!"}
@@ -394,7 +397,7 @@ def retrain_forecast(payload: ForecastRetrainPayload):
 
         engine_3_ts.fit(X, y)
 
-        with open("output/time_series_model.pkl", "wb") as f:
+        with open("output/testing/time_series_model.pkl", "wb") as f:
             pickle.dump(engine_3_ts, f)
 
         return {"status": "success", "message": f"Engine 3 retrained on {len(df)} historical sequences!"}
@@ -433,7 +436,7 @@ def retrain_recommend(payload: RecommenderRetrainPayload):
 
         engine_4_rec.fit(X, y, qid=qids, verbose=False)
 
-        with open("output/recommender_engine.pkl", "wb") as f:
+        with open("output/testing/recommender_engine.pkl", "wb") as f:
             pickle.dump(engine_4_rec, f)
 
         return {"status": "success",
